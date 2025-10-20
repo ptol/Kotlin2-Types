@@ -7,21 +7,22 @@ import java.time.LocalDateTime
 /**
  * Известный вам список ошибок
  */
-sealed class ApiException(message: String) : Throwable(message) {
-    data object NotAuthorized : ApiException("Not authorized")
-    data object NetworkException : ApiException("Not connected")
-    data object UnknownException: ApiException("Unknown exception")
+sealed class ApiException2(message: String) : Throwable(message) {
+    data object NotAuthorized : ApiException2("Not authorized")
+    data object NetworkException : ApiException2("Not connected")
+    data object UnknownException: ApiException2("Unknown exception")
 }
 
+class ErrorLogger2<T : Throwable> {
+    private val errors = mutableListOf<Pair<LocalDateTime, T>>()
 
-class ErrorLogger<in E : Throwable> {
-    val errors = mutableListOf<Pair<LocalDateTime, Throwable>>()
-
-    fun log(response: NetworkResponse<*, E>) {
+    fun <E : T> log(response: NetworkResponse<*, E>) {
         if (response is Failure) {
             errors.add(response.responseDateTime to response.error)
         }
     }
+
+    fun dump(): List<Pair<LocalDateTime, T>> = errors.toList()
 
     fun dumpLog() {
         errors.forEach { (date, error) ->
@@ -30,7 +31,7 @@ class ErrorLogger<in E : Throwable> {
     }
 }
 
-fun processThrowables(logger: ErrorLogger<Throwable>) {
+fun processThrowables(logger: ErrorLogger2<Throwable>) {
     logger.log(Success("Success"))
     Thread.sleep(100)
     logger.log(Success(Shape()))
@@ -39,19 +40,20 @@ fun processThrowables(logger: ErrorLogger<Throwable>) {
     logger.dumpLog()
 }
 
-fun processApiErrors(apiExceptionLogger: ErrorLogger<ApiException>) {
+fun processApiErrors(apiExceptionLogger: ErrorLogger2<in ApiException2>) {
     apiExceptionLogger.log(Success("Success"))
     Thread.sleep(100)
     apiExceptionLogger.log(Success(Shape()))
     Thread.sleep(100)
-    apiExceptionLogger.log(Failure(ApiException.NetworkException))
+    apiExceptionLogger.log(Failure(ApiException2.NetworkException))
     apiExceptionLogger.dumpLog()
 }
 
 fun main() {
-    val logger = ErrorLogger<Throwable>()
+    val logger = ErrorLogger2<Throwable>()
     println("Processing Throwable:")
     processThrowables(logger)
     println("Processing Api:")
     processApiErrors(logger)
 }
+
